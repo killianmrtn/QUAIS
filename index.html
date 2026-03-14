@@ -570,10 +570,6 @@ function toggleStation(lineId, idx, val) {
   document.getElementById('detail-sub').textContent = `${s.visited} arrêts · ${s.passed} passés · ${s.total} stations`;
 }
 
-// ── SERVICE WORKER ──
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
-}
 
 // ── INIT ──
 loadState();
