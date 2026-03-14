@@ -1,16 +1,18 @@
-const CACHE = 'quais-v1';
+const CACHE = 'quais-v3';
 const ASSETS = [
-  './metro-tracker.html',
-  './manifest.json',
-  'https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap'
+  './',
+  './index.html',
+  './manifest.json'
 ];
-
+ 
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())
+    caches.open(CACHE)
+      .then(c => c.addAll(ASSETS))
+      .then(() => self.skipWaiting())
   );
 });
-
+ 
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
@@ -18,9 +20,16 @@ self.addEventListener('activate', e => {
     ).then(() => self.clients.claim())
   );
 });
-
+ 
 self.addEventListener('fetch', e => {
   e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request).catch(() => caches.match('./metro-tracker.html')))
+    fetch(e.request)
+      .then(response => {
+        const clone = response.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+        return response;
+      })
+      .catch(() => caches.match(e.request))
   );
 });
+ 
