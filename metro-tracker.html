@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="QUAIS">
+<meta name="theme-color" content="#0a0a0c">
+<meta name="description" content="Suis ta progression dans le métro parisien, station par station.">
+<link rel="manifest" href="manifest.json">
+<title>QUAIS</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a0c;
+  --surface: #141418;
+  --surface2: #1c1c22;
+  --border: #27272f;
+  --text: #ededf5;
+  --muted: #5c5c70;
+  --radius: 14px;
+  --visited: #facc15;
+  --passed: #4ade80;
+  --none: #2a2a35;
+
+  --l1: #FFCC00; --l2: #003CA6; --l3: #6E6E00; --l3b: #6EC4E8;
+  --l4: #CF009E; --l5: #FF7E2E; --l6: #6ECA97; --l7: #FA9ABA;
+  --l7b: #83c491; --l8: #D282BE; --l9: #CDCD00; --l10: #E3A430;
+  --l11: #8D5E2A; --l12: #007852; --l13: #98D4E2; --l14: #62259D;
+
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Syne', sans-serif;
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+}
+
+/* ── NAV TABS ── */
+.tab-bar {
+  display: flex;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.tab {
+  flex: 1;
+  padding: 14px 8px 12px;
+  text-align: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.2s;
+  border-bottom: 2px solid transparent;
+}
+.tab.active {
+  color: var(--text);
+  border-bottom-color: var(--text);
+}
+
+/* ── SCREENS ── */
+.screen { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+.screen.active { display: flex; }
+
+/* ── DASHBOARD ── */
+.dashboard {
+  padding: 20px 16px;
+  overflow-y: auto;
+  flex: 1;
+  padding-bottom: calc(16px + var(--safe-bottom));
+}
+.dash-header {
+  margin-bottom: 24px;
+}
+.dash-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.dash-title span { color: var(--muted); font-weight: 400; }
+.dash-global {
+  margin-top: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.global-nums {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 12px;
+}
+.gnum { display: flex; flex-direction: column; gap: 2px; }
+.gnum-val {
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1;
+  font-family: 'DM Mono', monospace;
+}
+.gnum-val.v { color: var(--visited); }
+.gnum-val.p { color: var(--passed); }
+.gnum-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.progress-bar-wrap { margin-top: 4px; }
+.bar-label { display: flex; justify-content: space-between; font-size: 0.65rem; font-family: 'DM Mono', monospace; color: var(--muted); margin-bottom: 4px; }
+.bar-track { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; position: relative; }
+.bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; position: absolute; top: 0; left: 0; }
+.bar-fill.v { background: var(--visited); z-index: 2; }
+.bar-fill.p { background: var(--passed); z-index: 1; }
+
+.lines-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.line-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.line-card:active { background: var(--surface2); }
+.line-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+  color: #fff;
+  font-family: 'DM Mono', monospace;
+}
+.line-info { flex: 1; min-width: 0; }
+.line-name { font-size: 0.85rem; font-weight: 700; margin-bottom: 4px; }
+.line-sub { font-size: 0.65rem; color: var(--muted); font-family: 'DM Mono', monospace; }
+.line-mini-bars { display: flex; flex-direction: column; gap: 3px; width: 80px; flex-shrink: 0; }
+.mini-bar-track { height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; position: relative; }
+.mini-fill { height: 100%; border-radius: 2px; transition: width 0.4s; position: absolute; top:0; left:0; }
+
+/* ── LINE DETAIL SCREEN ── */
+.line-header {
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  background: var(--surface);
+}
+.back-btn {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: var(--surface2);
+  border: none;
+  color: var(--text);
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.line-header-info { flex: 1; }
+.line-header-title { font-size: 1rem; font-weight: 800; }
+.line-header-sub { font-size: 0.65rem; color: var(--muted); font-family: 'DM Mono', monospace; margin-top: 1px; }
+.line-progress-strip {
+  padding: 10px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.strip-bars { display: flex; flex-direction: column; gap: 4px; }
+.strip-row { display: flex; align-items: center; gap: 8px; }
+.strip-icon { font-size: 0.75rem; width: 16px; text-align: center; }
+.strip-bar-track { flex: 1; height: 5px; background: var(--surface2); border-radius: 3px; overflow: hidden; position: relative; }
+.strip-fill { height: 100%; border-radius: 3px; position: absolute; top:0; left:0; transition: width 0.3s; }
+.strip-pct { font-size: 0.65rem; font-family: 'DM Mono', monospace; color: var(--muted); width: 34px; text-align: right; }
+
+.stations-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0 calc(8px + var(--safe-bottom));
+}
+.station-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0 16px;
+  min-height: 52px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.station-row:last-child { border-bottom: none; }
+/* Timeline dot */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 28px;
+  flex-shrink: 0;
+  align-self: stretch;
+  position: relative;
+}
+.tl-line {
+  position: absolute;
+  left: 50%; top: 0; bottom: 0;
+  width: 2px;
+  transform: translateX(-50%);
+  background: var(--border);
+}
+.tl-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--bg);
+  position: relative;
+  z-index: 1;
+  margin-top: 21px;
+  transition: background 0.2s, border-color 0.2s;
+  flex-shrink: 0;
+}
+.tl-dot.is-visited { background: var(--visited); border-color: var(--visited); }
+.tl-dot.is-passed { background: var(--passed); border-color: var(--passed); }
+
+.station-name {
+  flex: 1;
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 0 10px;
+  line-height: 1.3;
+}
+.station-name.is-visited { color: var(--visited); }
+.station-name.is-passed { color: var(--passed); }
+
+.station-btns {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.st-btn {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.st-btn:active { transform: scale(0.9); }
+.st-btn.active-v {
+  background: rgba(250,204,21,0.15);
+  border-color: var(--visited);
+}
+.st-btn.active-p {
+  background: rgba(74,222,128,0.15);
+  border-color: var(--passed);
+}
+
+/* ── SCROLLBARS ── */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ── LEGEND ── */
+.legend {
+  display: flex; gap: 16px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.65rem; color: var(--muted); }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+</style>
+</head>
+<body>
+
+<div class="tab-bar">
+  <div class="tab active" onclick="showScreen('dash')">📊 Tableau de bord</div>
+  <div class="tab" onclick="showScreen('lines')">🚇 Lignes</div>
+</div>
+
+<!-- DASHBOARD SCREEN -->
+<div class="screen active" id="screen-dash">
+  <div class="dashboard">
+    <div class="dash-header">
+      <div class="dash-title">Métro Paris<br><span>Mon parcours</span></div>
+      <div class="dash-global" id="global-stats"></div>
+    </div>
+    <div class="lines-grid" id="lines-grid"></div>
+  </div>
+</div>
+
+<!-- LINES SCREEN -->
+<div class="screen" id="screen-lines">
+  <div class="line-header">
+    <button class="back-btn" onclick="goBack()">←</button>
+    <div class="line-badge" id="detail-badge"></div>
+    <div class="line-header-info">
+      <div class="line-header-title" id="detail-title"></div>
+      <div class="line-header-sub" id="detail-sub"></div>
+    </div>
+  </div>
+  <div class="line-progress-strip">
+    <div class="strip-bars">
+      <div class="strip-row">
+        <span class="strip-icon">🟡</span>
+        <div class="strip-bar-track"><div class="strip-fill" id="strip-v" style="background:var(--visited)"></div></div>
+        <span class="strip-pct" id="strip-vpct">0%</span>
+      </div>
+      <div class="strip-row">
+        <span class="strip-icon">🟢</span>
+        <div class="strip-bar-track"><div class="strip-fill" id="strip-p" style="background:var(--passed)"></div></div>
+        <span class="strip-pct" id="strip-ppct">0%</span>
+      </div>
+    </div>
+  </div>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--visited)"></div>Arrêté(e)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--passed)"></div>Juste passé(e)</div>
+  </div>
+  <div class="stations-list" id="stations-list"></div>
+</div>
+
+<script>
+// ── DATA ──
+const LINES = [
+  { id: "1", label: "1", color: "#FFCC00", textColor: "#000", stations: ["La Défense","Esplanade de la Défense","Pont de Neuilly","Les Sablons","Port Maillot","Argentine","Charles de Gaulle-Étoile","George V","Franklin D. Roosevelt","Champs-Élysées - Clémenceau","Concorde","Tuileries","Palais Royal - Musée du Louvre","Louvre - Rivoli","Châtelet","Hôtel de Ville","Saint-Paul","Bastille","Gare de Lyon","Reuilly-Diderot","Nation","Porte de Vincennes","Saint-Mandé","Bérault","Château de Vincennes"] },
+  { id: "2", label: "2", color: "#003CA6", textColor: "#fff", stations: ["Porte Dauphine","Victor Hugo","Charles de Gaulle - Étoile","Ternes","Courcelles","Monceau","Villiers","Rome","Place de Clichy","Blanche","Pigalle","Anvers","Barbès - Rochechouart","La Chapelle","Stalingrad","Jaurès","Colonel Fabien","Belleville","Couronnes","Ménilmontant","Père Lachaise","Philippe Auguste","Alexandre Dumas","Avron","Nation"] },
+  { id: "3", label: "3", color: "#6E6E00", textColor: "#fff", stations: ["Pont de Lavallois - Bécon","Anatole France","Louise Michel","Porte de Champerret","Pereire","Wagram","Malesherbes","Villiers","Europe","Saint-Lazare","Havre - Caumartin","Opéra","Quatre-Septembre","Bourse","Sentier","Réaumur - Sébastopol","Arts et Métiers","Temple","République","Parmentier","Rue Saint-Maur","Père Lachaise","Gambetta","Porte de Bagnolet","Gallieni"] },
+  { id: "3bis", label: "3b", color: "#6EC4E8", textColor: "#000", stations: ["Porte des Lilas","Saint-Fargeau","Pelleport","Gambetta"] },
+  { id: "4", label: "4", color: "#CF009E", textColor: "#fff", stations: ["Porte de Clignancourt","Simplon","Marcadet - Poissonniers","Château Rouge","Barbès - Rochechouart","Gare du Nord","Gare de l'Est","Château d'Eau","Strasbourg - Saint-Denis","Réaumur - Sébastopol","Étienne Marcel","Les Halles","Châtelet","Cité","Saint-Michel","Odéon","Saint-Germain-des-Prés","Saint-Sulpice","Saint-Placide","Montparnasse - Bienvenüe","Vavin","Raspail","Denfert-Rochereau","Mouton-Duvernet","Alésia","Porte d'Orléans","Mairie de Montrouge","Barbara","Bagneux - Lucie Aubrac"] },
+  { id: "5", label: "5", color: "#FF7E2E", textColor: "#fff", stations: ["Bobigny - Pablo Picasso","Bobigny - Pantin - Raymond Queneau","Église de Pantin","Hoche","Porte de Pantin","Ourcq","Laumière","Jaurès","Stalingrad","Gare du Nord","Gare de l'Est","Jacques Bonsergent","République","Oberkampf","Richard-Lenoir","Bréguet - Sabin","Bastille","Quai de la Râpée","Gare d'Austerlitz","Saint-Marcel","Campo-Formio","Place d'Italie"] },
+  { id: "6", label: "6", color: "#6ECA97", textColor: "#000", stations: ["Charles de Gaulle - Étoile","Kléber","Boissière","Trocadéro","Passy","Bir-Hakeim","Dupleix","La Motte-Picquet - Grenelle","Cambronne","Sèvres - Lecourbe","Pasteur","Montparnasse - Bienvenüe","Edgar Quinet","Raspail","Denfert-Rochereau","Saint-Jacques","Glacière","Corvisart","Place d'Italie","Nationale","Chevaleret","Quai de la Gare","Bercy","Dugommier","Daumesnil","Bel-Air","Picpus","Nation"] },
+  { id: "7", label: "7", color: "#FA9ABA", textColor: "#000", stations: ["La Courneuve - 8 Mai 1945","Fort d'Aubervilliers","Aubervilliers - Pantin - Quatre Chemins","Porte de la Villette","Corentin Cariou","Crimée","Riquet","Stalingrad","Louis Blanc","Château-Landon","Gare de l'Est","Poissonnière","Cadet","Le Peletier","Chaussée d'Antin - La Fayette","Opéra","Pyramides","Palais-Royal - Musée du Louvre","Pont-Neuf","Châtelet","Pont Marie","Sully - Morland","Jussieu","Place Monge","Censier - Daubenton","Les Gobelins","Place d'Italie","Tolbiac","Maison Blanche","Le Kremlin-Bicêtre","Villejuif - Léo Lagrange","Villejuif - Paul-Vaillant-Couturier","Villejuif - Louis Aragon","Porte d'Italie","Porte de Choisy","Porte d'Ivry","Pierre et Marie Curie","Mairie d'Ivry"] },
+  { id: "7bis", label: "7b", color: "#83c491", textColor: "#000", stations: ["Louis Blanc","Jaurès","Bolivar","Buttes Chaumont","Botzaris","Place des Fêtes","Pré Saint-Gervais","Danube"] },
+  { id: "8", label: "8", color: "#D282BE", textColor: "#fff", stations: ["Balard","Lourmel","Boucicaut","Félix Faure","Commerce","La Motte-Picquet - Grenelle","École Militaire","La Tour-Maubourg","Invalides","Concorde","Madeleine","Opéra","Richelieu - Drouot","Grands Boulevards","Bonne-Nouvelle","Strasbourg Saint-Denis","République","Filles du Calvaire","Saint-Sébastien - Froissart","Chemin Vert","Bastille","Ledru-Rollin","Faidherbe - Chaligny","Reuilly - Diderot","Montgallet","Daumesnil","Michel Bizot","Porte Dorée","Porte de Charenton","Liberté","Charenton - Écoles","École vétérinaire de Maisons-Alfort","Maisons-Alfort - Les Juilliottes","Créteil - L'Échat","Créteil - Université","Créteil - Préfecture","Pointe du Lac"] },
+  { id: "9", label: "9", color: "#CDCD00", textColor: "#000", stations: ["Pont de Sèvres","Billancourt","Marcel Sembat","Porte de Saint-Cloud","Exelmans","Michel-Ange - Molitor","Michel-Ange - Auteuil","Jasmin","Ranelagh","La Muette","Rue de la Pompe","Trocadéro","Iéna","Alma - Marceau","Franklin D. Roosevelt","Saint-Philippe du Roule","Miromesnil","Saint-Augustin","Havre - Caumartin","Chaussée d'Antin - La Fayette","Richelieu - Drouot","Grands Boulevards","Bonne-Nouvelle","Strasbourg - Saint-Denis","République","Oberkampf","Saint-Ambroise","Voltaire","Charonne","Rue des Boulets","Nation","Buzenval","Maraîchers","Porte de Montreuil","Robespierre","Croix de Chavaux","Mairie de Montreuil"] },
+  { id: "10", label: "10", color: "#E3A430", textColor: "#fff", stations: ["Pont de Saint-Cloud","Boulogne - Jean Jaurès","Porte d'Auteuil","Michel-Ange - Auteuil","Église d'Auteuil","Michel-Ange - Molitor","Chardon-Lagache","Mirabeau","Javel - André Citroën","Charles Michels","Avenue Émile Zola","La Motte-Picquet - Grenelle","Ségur","Duroc","Vaneau","Sèvres - Babylone","Mabillon","Odéon","Cluny - La Sorbonne","Maubert - Mutualité","Cardinal Lemoine","Jussieu","Gare d'Austerlitz"] },
+  { id: "11", label: "11", color: "#8D5E2A", textColor: "#fff", stations: ["Châtelet","Hôtel de Ville","Rambuteau","Arts et Métiers","République","Goncourt","Belleville","Pyrénées","Jourdain","Place des Fêtes","Télégraphe","Porte des Lilas","Mairie des Lilas","Serge Gainsbourg","Romainville - Carnot","Montreuil - Hôpital","La Dhuys","Coteaux Beauclair","Rosny - Bois-Perrier"] },
+  { id: "12", label: "12", color: "#007852", textColor: "#fff", stations: ["Mairie d'Aubervilliers","Aimé Césaire","Front Populaire","Porte de La Chapelle","Marx Dormoy","Marcadet - Poissonniers","Jules Joffrin","Lamarck - Caulaincourt","Abbesses","Pigalle","Saint-Georges","Notre-Dame-de-Lorette","Trinité d'Estienne d'Orves","Saint-Lazare","Madeleine","Concorde","Assemblée Nationale","Solférino","Rue du Bac","Sèvres - Babylone","Rennes","Notre-Dame-des-Champs","Montparnasse - Bienvenüe","Falguière","Pasteur","Volontaires","Vaugirard","Convention","Porte de Versailles","Corentin Celton","Mairie d'Issy"] },
+  { id: "13", label: "13", color: "#98D4E2", textColor: "#000", stations: ["Les Courtilles","Les Agnettes","Gabriel Péri","Mairie de Clichy","Porte de Clichy","Brochant","Saint-Denis - Université","Basilique de Saint-Denis","Saint-Denis - Porte de Paris","Carrefour Pleyel","Mairie de Saint-Ouen","Garibaldi","Porte de Saint-Ouen","Guy Môquet","La Fourche","Place de Clichy","Liège","Saint-Lazare","Miromesnil","Champs-Élysées - Clemenceau","Invalides","Varenne","Saint-François-Xavier","Duroc","Montparnasse - Bienvenüe","Gaîté","Pernety","Plaisance","Porte de Vanves","Malakoff - Plateau de Vanves","Malakoff - Rue Étienne Dolet","Châtillon - Montrouge"] },
+  { id: "14", label: "14", color: "#62259D", textColor: "#fff", stations: ["Saint-Denis Pleyel","Mairie de Saint-Ouen","Saint-Ouen","Porte de Clichy","Pont Cardinet","Saint-Lazare","Madeleine","Pyramides","Châtelet","Gare de Lyon","Bercy","Cour Saint-Émilion","Bibliothèque François Mitterrand","Olympiades","Maison Blanche","Hôpital Bicêtre","Villejuif - Gustave Roussy","L'Haÿ-les-Roses","Chevilly-Larue","Thiais - Orly","Aéroport d'Orly"] },
+];
+
+// ── STATE ──
+// state[lineId][stationIndex] = 0 (rien) | 1 (passé) | 2 (arrêté)
+let state = {};
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem('metro-paris-v2');
+    if (saved) state = JSON.parse(saved);
+  } catch(e) {}
+  LINES.forEach(l => {
+    if (!state[l.id]) state[l.id] = {};
+  });
+}
+
+function saveState() {
+  localStorage.setItem('metro-paris-v2', JSON.stringify(state));
+}
+
+function getStation(lineId, idx) {
+  return state[lineId]?.[idx] || 0;
+}
+
+function setStation(lineId, idx, val) {
+  if (!state[lineId]) state[lineId] = {};
+  // toggle: same button = reset
+  state[lineId][idx] = (state[lineId][idx] === val) ? 0 : val;
+  saveState();
+}
+
+function getLineStats(line) {
+  const total = line.stations.length;
+  let visited = 0, passed = 0;
+  for (let i = 0; i < total; i++) {
+    const s = getStation(line.id, i);
+    if (s === 2) visited++;
+    else if (s === 1) passed++;
+  }
+  return { total, visited, passed };
+}
+
+function getGlobalStats() {
+  let total = 0, visited = 0, passed = 0;
+  LINES.forEach(l => {
+    const s = getLineStats(l);
+    total += s.total;
+    visited += s.visited;
+    passed += s.passed;
+  });
+  return { total, visited, passed };
+}
+
+// ── SCREENS ──
+let currentLine = null;
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  if (name === 'dash') {
+    document.getElementById('screen-dash').classList.add('active');
+    document.querySelector('.tab:nth-child(1)').classList.add('active');
+    renderDashboard();
+  } else if (name === 'lines') {
+    document.getElementById('screen-lines').classList.add('active');
+    document.querySelector('.tab:nth-child(2)').classList.add('active');
+  }
+}
+
+function openLine(lineId) {
+  currentLine = LINES.find(l => l.id === lineId);
+  renderLineDetail();
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-lines').classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelector('.tab:nth-child(2)').classList.add('active');
+}
+
+function goBack() {
+  currentLine = null;
+  showScreen('dash');
+}
+
+// ── RENDER DASHBOARD ──
+function renderDashboard() {
+  const g = getGlobalStats();
+  const vPct = g.total ? Math.round(g.visited / g.total * 100) : 0;
+  const pPct = g.total ? Math.round((g.visited + g.passed) / g.total * 100) : 0;
+
+  document.getElementById('global-stats').innerHTML = `
+    <div class="global-nums">
+      <div class="gnum">
+        <div class="gnum-val v">${g.visited}</div>
+        <div class="gnum-label">🟡 Arrêts</div>
+      </div>
+      <div class="gnum">
+        <div class="gnum-val p">${g.passed}</div>
+        <div class="gnum-label">🟢 Passé(e)</div>
+      </div>
+      <div class="gnum">
+        <div class="gnum-val" style="color:var(--muted)">${g.total}</div>
+        <div class="gnum-label">Total</div>
+      </div>
+    </div>
+    <div class="progress-bar-wrap">
+      <div class="bar-label"><span>Arrêté(e)</span><span>${vPct}%</span></div>
+      <div class="bar-track">
+        <div class="bar-fill p" style="width:${pPct}%"></div>
+        <div class="bar-fill v" style="width:${vPct}%"></div>
+      </div>
+    </div>
+  `;
+
+  const grid = document.getElementById('lines-grid');
+  grid.innerHTML = LINES.map(line => {
+    const s = getLineStats(line);
+    const vW = s.total ? Math.round(s.visited / s.total * 100) : 0;
+    const pW = s.total ? Math.round((s.visited + s.passed) / s.total * 100) : 0;
+    const endStation = line.stations[line.stations.length - 1];
+    const startStation = line.stations[0];
+    return `
+      <div class="line-card" onclick="openLine('${line.id}')">
+        <div class="line-badge" style="background:${line.color};color:${line.textColor}">${line.label}</div>
+        <div class="line-info">
+          <div class="line-name">Ligne ${line.label}</div>
+          <div class="line-sub">${startStation} ↔ ${endStation}</div>
+          <div class="line-sub" style="margin-top:2px">${s.visited} arrêt${s.visited>1?'s':''} · ${s.passed} passé${s.passed>1?'s':''} · ${s.total} stations</div>
+        </div>
+        <div class="line-mini-bars">
+          <div class="mini-bar-track">
+            <div class="mini-fill" style="background:var(--passed);width:${pW}%"></div>
+            <div class="mini-fill" style="background:var(--visited);width:${vW}%"></div>
+          </div>
+          <div style="font-size:0.6rem;font-family:'DM Mono',monospace;color:var(--muted);text-align:right;margin-top:2px">${vW}%</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── RENDER LINE DETAIL ──
+function renderLineDetail() {
+  if (!currentLine) return;
+  const line = currentLine;
+  const s = getLineStats(line);
+  const vPct = s.total ? Math.round(s.visited / s.total * 100) : 0;
+  const pPct = s.total ? Math.round(s.passed / s.total * 100) : 0;
+  const anyPct = s.total ? Math.round((s.visited + s.passed) / s.total * 100) : 0;
+
+  const badge = document.getElementById('detail-badge');
+  badge.textContent = line.label;
+  badge.style.background = line.color;
+  badge.style.color = line.textColor;
+
+  document.getElementById('detail-title').textContent = `Ligne ${line.label}`;
+  document.getElementById('detail-sub').textContent = `${s.visited} arrêts · ${s.passed} passés · ${s.total} stations`;
+
+  document.getElementById('strip-v').style.width = vPct + '%';
+  document.getElementById('strip-vpct').textContent = vPct + '%';
+  document.getElementById('strip-p').style.width = anyPct + '%';
+  document.getElementById('strip-ppct').textContent = pPct + '%';
+
+  const list = document.getElementById('stations-list');
+  list.innerHTML = line.stations.map((name, i) => {
+    const val = getStation(line.id, i);
+    const isLast = i === line.stations.length - 1;
+    const dotClass = val === 2 ? 'is-visited' : val === 1 ? 'is-passed' : '';
+    const nameClass = val === 2 ? 'is-visited' : val === 1 ? 'is-passed' : '';
+    return `
+      <div class="station-row" id="sr-${i}">
+        <div class="timeline">
+          ${!isLast ? '<div class="tl-line"></div>' : ''}
+          <div class="tl-dot ${dotClass}" id="dot-${i}"></div>
+        </div>
+        <div class="station-name ${nameClass}" id="sname-${i}">${name}</div>
+        <div class="station-btns">
+          <button class="st-btn ${val===2?'active-v':''}" id="btn-v-${i}" onclick="toggleStation('${line.id}',${i},2)" title="Arrêté(e)">🟡</button>
+          <button class="st-btn ${val===1?'active-p':''}" id="btn-p-${i}" onclick="toggleStation('${line.id}',${i},1)" title="Juste passé(e)">🟢</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleStation(lineId, idx, val) {
+  setStation(lineId, idx, val);
+  // Update DOM without full re-render
+  const newVal = getStation(lineId, idx);
+  const dot = document.getElementById(`dot-${idx}`);
+  const name = document.getElementById(`sname-${idx}`);
+  const btnV = document.getElementById(`btn-v-${idx}`);
+  const btnP = document.getElementById(`btn-p-${idx}`);
+
+  dot.className = 'tl-dot' + (newVal===2?' is-visited':newVal===1?' is-passed':'');
+  name.className = 'station-name' + (newVal===2?' is-visited':newVal===1?' is-passed':'');
+  btnV.className = 'st-btn' + (newVal===2?' active-v':'');
+  btnP.className = 'st-btn' + (newVal===1?' active-p':'');
+
+  // Update strip
+  const line = LINES.find(l => l.id === lineId);
+  const s = getLineStats(line);
+  const vPct = s.total ? Math.round(s.visited / s.total * 100) : 0;
+  const pPct = s.total ? Math.round(s.passed / s.total * 100) : 0;
+  const anyPct = s.total ? Math.round((s.visited + s.passed) / s.total * 100) : 0;
+  document.getElementById('strip-v').style.width = vPct + '%';
+  document.getElementById('strip-vpct').textContent = vPct + '%';
+  document.getElementById('strip-p').style.width = anyPct + '%';
+  document.getElementById('strip-ppct').textContent = pPct + '%';
+  document.getElementById('detail-sub').textContent = `${s.visited} arrêts · ${s.passed} passés · ${s.total} stations`;
+}
+
+// ── SERVICE WORKER ──
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+// ── INIT ──
+loadState();
+renderDashboard();
+
+// If lines tab clicked without a line, show line picker (re-use dash as picker)
+document.querySelector('.tab:nth-child(2)').addEventListener('click', function() {
+  if (!currentLine) {
+    // show line picker
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    // temp: render a line picker in the lines screen header area
+    showLinePicker();
+  }
+});
+
+function showLinePicker() {
+  document.getElementById('screen-lines').classList.add('active');
+
+  // Reuse the lines screen as a picker when no line selected
+  document.getElementById('detail-badge').textContent = '🚇';
+  document.getElementById('detail-badge').style.background = 'var(--surface2)';
+  document.getElementById('detail-badge').style.color = 'var(--text)';
+  document.getElementById('detail-title').textContent = 'Choisir une ligne';
+  document.getElementById('detail-sub').textContent = 'Sélectionne une ligne ci-dessous';
+  document.getElementById('strip-v').style.width = '0%';
+  document.getElementById('strip-p').style.width = '0%';
+  document.getElementById('strip-vpct').textContent = '';
+  document.getElementById('strip-ppct').textContent = '';
+  document.querySelector('.back-btn').onclick = () => showScreen('dash');
+
+  const list = document.getElementById('stations-list');
+  list.innerHTML = LINES.map(line => {
+    const s = getLineStats(line);
+    const vW = s.total ? Math.round(s.visited / s.total * 100) : 0;
+    return `
+      <div class="station-row" onclick="openLine('${line.id}')" style="cursor:pointer;min-height:56px">
+        <div class="line-badge" style="background:${line.color};color:${line.textColor};width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.75rem;flex-shrink:0;font-family:'DM Mono',monospace">${line.label}</div>
+        <div style="flex:1;padding:0 12px">
+          <div style="font-weight:700;font-size:0.88rem">Ligne ${line.label}</div>
+          <div style="font-size:0.65rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:2px">${s.stations||line.stations.length} stations · ${vW}% visité</div>
+        </div>
+        <div style="font-size:0.9rem;color:var(--muted)">›</div>
+      </div>
+    `;
+  }).join('');
+}
+</script>
+</body>
+</html>
